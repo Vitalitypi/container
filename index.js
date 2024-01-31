@@ -10,6 +10,7 @@ app.use(bodyParser.json({}))
 app.use(bodyParser.urlencoded({ extended: true }))
 
 app.all('/', async (req, res) => {
+  console.log(res)
   const { ToUserName, FromUserName, MsgType, Content, CreateTime } = req.body
   if (MsgType === 'text') {
     if (Content === '回复文字') {
