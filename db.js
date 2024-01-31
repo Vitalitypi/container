@@ -12,9 +12,9 @@ const sequelize = new Sequelize("nodejs_demo", MYSQL_USERNAME, MYSQL_PASSWORD, {
 });
 
 // 定义数据模型
-const Namer = sequelize.define("Namer", {
-  name: {
-    type: DataTypes.VARCHAR,
+const Counter = sequelize.define("Counter", {
+  count: {
+    type: DataTypes.INTEGER,
     allowNull: false,
     defaultValue: 1,
   },
@@ -22,11 +22,11 @@ const Namer = sequelize.define("Namer", {
 
 // 数据库初始化方法
 async function init() {
-  await Namer.sync({ alter: true });
+  await Counter.sync({ alter: true });
 }
 
 // 导出初始化方法和模型
 module.exports = {
   init,
-  Namer,
+  Counter,
 };

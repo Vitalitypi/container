@@ -1,6 +1,6 @@
 const express = require('express')
 const bodyParser = require('body-parser')
-const { init: initDB, Namer } = require("./db");
+const { init: initDB, Counter } = require("./db");
 const PORT = process.env.PORT || 80
 
 const app = express()
@@ -18,7 +18,7 @@ app.all('/', async (req, res) => {
       FromUserName: ToUserName,
       CreateTime: CreateTime,
       MsgType: 'text',
-      Content: await Namer.name()
+      Content: await Counter.count()
     })
   } else {
     res.send('success')
