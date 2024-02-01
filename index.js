@@ -18,6 +18,7 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.all('/', async (req, res) => {
   const today = new Date();
   const dayOfWeek = today.getDay();
+  let originDay = -1
   let token = "", JSESSIONID = ""
   try {
     // 创建mysql连接
@@ -32,14 +33,7 @@ app.all('/', async (req, res) => {
     console.log(rows[0])
     token = rows[0]['token']
     JSESSIONID = rows[0]['JSESSIONID']
-    if(Math.abs(dayOfWeek-rows[0]['day'])>3){
-      // 获取新的yiso token
-      let login = await yisoLogin()
-      token = login['token']
-      JSESSIONID = login['JSESSIONID']
-      // 写入数据库
-      await connection.execute('INSERT INTO yiso (day,token,JSESSIONID) VALUES (?,?,?)',[dayOfWeek,token,JSESSIONID]);
-    }
+    originDay = rows[0]['day']
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -51,6 +45,14 @@ app.all('/', async (req, res) => {
     res.send(ans.json)
   } else {
     res.send('success')
+  }
+  if(Math.abs(dayOfWeek-originDay)>3){
+    // 获取新的yiso token
+    let login = await yisoLogin()
+    token = login['token']
+    JSESSIONID = login['JSESSIONID']
+    // 写入数据库
+    await connection.execute('UPDATE yiso SET day = ?, token = ?, JSESSIONID = ?  WHERE day = ?',[dayOfWeek,token,JSESSIONID,originDay]);
   }
 })
 
@@ -220,11 +222,6 @@ async function yisoLogin() {
       break
     }
   }
-  console.log("更新数据：",{
-    token: token,
-    JSESSIONID: JSESSIONID,
-    time: new Date(),
-  })
   return {
     token: token,
     JSESSIONID: JSESSIONID,
