@@ -26,7 +26,7 @@ app.all('/', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
   console.log(rows,fields)
-  console.log('消息推送', req.body)
+  console.log('消息推送 ', req.body)
   const { ToUserName, FromUserName, MsgType, Content, CreateTime } = req.body
   if (MsgType === 'text') {
     res.send({
