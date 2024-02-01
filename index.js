@@ -20,7 +20,11 @@ app.use(bodyParser.json({}))
 app.use(bodyParser.urlencoded({ extended: true }))
 
 app.all('/', async (req, res) => {
-  const [rows, fields] = await connection.execute('SELECT * FROM test');
+  try { 
+    const [rows, fields] = await connection.execute('SELECT * FROM test');
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
   console.log(rows,fields)
   console.log('消息推送', req.body)
   const { ToUserName, FromUserName, MsgType, Content, CreateTime } = req.body
