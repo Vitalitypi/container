@@ -2,6 +2,7 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const mysql = require('mysql2/promise');
 const rp = require('request-promise');
+const request = require('request')
 const CryptoJS = require('crypto-js');
 const axios = require('axios')
 const btoa = require('btoa');
@@ -19,7 +20,8 @@ app.all('/', async (req, res) => {
   const today = new Date();
   const dayOfWeek = today.getDay();
   let originDay = -1
-  let token = "", JSESSIONID = ""
+  let token = ""
+  let JSESSIONID = ""
   const connection = await mysql.createConnection({ 
     host: host_mysql,
     port: port_mysql,
@@ -37,8 +39,16 @@ app.all('/', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-  console.log('消息推送', req.body)
+  const appid = req.headers['x-wx-from-appid'] || ''
   const { ToUserName, FromUserName, MsgType, Content, CreateTime } = req.body
+  console.log('推送接收的账号', ToUserName, '创建时间', CreateTime)
+  sendmess(appid, {
+    touser: FromUserName,
+    msgtype: 'text',
+    text: {
+      content: '正在搜索中，稍安勿躁...'
+    }
+  })
   if (MsgType === 'text') {
     let ans = await yiso({FromUserName:FromUserName,ToUserName:ToUserName},Content,1,0,token,JSESSIONID)
     console.log(ans)
@@ -326,5 +336,22 @@ async function Login(JSESSIONID, code) {
       code: 1,
       token: arr[0].substring(8, 44)
     }
+  })
+}
+function sendmess (appid, mess) {
+  return new Promise((resolve, reject) => {
+    request({
+      method: 'POST',
+      url: `http://api.weixin.qq.com/cgi-bin/message/custom/send?from_appid=${appid}`,
+      body: JSON.stringify(mess)
+    }, function (error, response) {
+      if (error) {
+        console.log('接口返回错误', error)
+        reject(error.toString())
+      } else {
+        console.log('接口返回内容', response.body)
+        resolve(response.body)
+      }
+    })
   })
 }
