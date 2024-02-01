@@ -27,14 +27,8 @@ app.use(bodyParser.json({}))
 app.use(bodyParser.urlencoded({ extended: true }))
 
 app.all('/', async (req, res) => {
-  connection.query('SELECT * FROM test', (error, results, fields) => {
-    if (error) {
-      console.error('Error querying database: ' + error.stack);
-      res.status(500).send('Error querying database');
-      return;
-    }
-    return results;
-  });
+  const json = await getMysql()
+  console.log(json)
   console.log('消息推送', req.body)
   const { ToUserName, FromUserName, MsgType, Content, CreateTime } = req.body
   if (MsgType === 'text') {
@@ -53,3 +47,12 @@ app.all('/', async (req, res) => {
 app.listen(PORT, function () {
   console.log(`运行成功，端口：${PORT}`)
 })
+
+async function getMysql(){
+  try {
+    const results = await connection.query('SELECT * FROM test');
+    return results;
+  } catch (error) {
+    console.error('Error querying database: ' + error.stack);
+  }
+}
