@@ -8,6 +8,8 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.16.4",
+    "request-promise": "^4.2.6",
+    "crypto-js": "^4.2.0",
     "mysql2": "^2.3.2"
   }
 }
