@@ -42,17 +42,27 @@ app.all('/', async (req, res) => {
   const appid = req.headers['x-wx-from-appid'] || ''
   const { ToUserName, FromUserName, MsgType, Content, CreateTime } = req.body
   console.log('推送接收的账号', ToUserName, '来自于', FromUserName, 'appid', appid)
-  // sendmess(appid, {
-  //   touser: FromUserName,
-  //   msgtype: 'text',
-  //   text: {
-  //     content: '正在搜索中，稍安勿躁...'
-  //   }
-  // })
+  sendmess(appid, {
+    touser: FromUserName,
+    msgtype: 'text',
+    text: {
+      content: '正在搜索中，稍安勿躁...'
+    }
+  })
   if (MsgType === 'text') {
     let ans = await yiso({FromUserName:FromUserName,ToUserName:ToUserName},Content,1,0,token,JSESSIONID)
     console.log(ans)
-    res.send(ans.json)
+    if(appid.length>0){
+      sendmess(appid, {
+        touser: FromUserName,
+        msgtype: 'text',
+        text: {
+          content: ans.json.Content
+        }
+      })
+    }else{
+      res.send(ans.json)
+    }
   } else {
     res.send('success')
   }
