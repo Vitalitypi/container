@@ -20,15 +20,15 @@ app.all('/', async (req, res) => {
   const dayOfWeek = today.getDay();
   let originDay = -1
   let token = "", JSESSIONID = ""
+  const connection = await mysql.createConnection({ 
+    host: host_mysql,
+    port: port_mysql,
+    user: MYSQL_USERNAME, 
+    password: MYSQL_PASSWORD, 
+    database: 'nodejs_demo'
+  });
   try {
     // 创建mysql连接
-    const connection = await mysql.createConnection({ 
-      host: host_mysql,
-      port: port_mysql,
-      user: MYSQL_USERNAME, 
-      password: MYSQL_PASSWORD, 
-      database: 'nodejs_demo'
-    });
     const [rows, fields] = await connection.execute('SELECT * FROM yiso');
     console.log(rows[0])
     token = rows[0]['token']
