@@ -1,343 +1,95 @@
 const express = require('express')
-const bodyParser = require('body-parser')
-const mysql = require('mysql2/promise');
-const rp = require('request-promise');
 const request = require('request')
-const CryptoJS = require('crypto-js');
-const axios = require('axios')
-const btoa = require('btoa');
-const PORT = process.env.PORT || 80
-// 从环境变量中读取数据库配置
-const { MYSQL_USERNAME, MYSQL_PASSWORD, MYSQL_ADDRESS = "" } = process.env;
-const [host_mysql, port_mysql] = MYSQL_ADDRESS.split(":");
+
 const app = express()
 
-app.use(bodyParser.raw())
-app.use(bodyParser.json({}))
-app.use(bodyParser.urlencoded({ extended: true }))
+app.use(express.json())
 
 app.all('/', async (req, res) => {
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  let originDay = -1
-  let token = ""
-  let JSESSIONID = ""
-  const connection = await mysql.createConnection({ 
-    host: host_mysql,
-    port: port_mysql,
-    user: MYSQL_USERNAME, 
-    password: MYSQL_PASSWORD, 
-    database: 'nodejs_demo'
-  });
-  try {
-    // 创建mysql连接
-    const [rows, fields] = await connection.execute('SELECT * FROM yiso');
-    console.log(rows[0])
-    token = rows[0]['token']
-    JSESSIONID = rows[0]['JSESSIONID']
-    originDay = rows[0]['day']
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+  console.log('消息推送', req.body)
+  // 从header中取appid，如果from-appid不存在，则不是资源复用场景，可以直接传空字符串，使用环境所属账号发起云调用
   const appid = req.headers['x-wx-from-appid'] || ''
   const { ToUserName, FromUserName, MsgType, Content, CreateTime } = req.body
   console.log('推送接收的账号', ToUserName, '创建时间', CreateTime)
-  sendmess(appid, {
-    touser: FromUserName,
-    msgtype: 'text',
-    text: {
-      content: '正在搜索中，稍安勿躁...'
-    }
-  })
   if (MsgType === 'text') {
-    let ans = await yiso({FromUserName:FromUserName,ToUserName:ToUserName},Content,1,0,token,JSESSIONID)
-    console.log(ans)
-    res.send(ans.json)
+    if (Content === '回复文字') { // 小程序、公众号可用
+      await sendmess(appid, {
+        touser: FromUserName,
+        msgtype: 'text',
+        text: {
+          content: '这是回复的消息'
+        }
+      })
+    } else if (Content === '回复图片') { // 小程序、公众号可用
+      await sendmess(appid, {
+        touser: FromUserName,
+        msgtype: 'image',
+        image: {
+          media_id: 'P-hoCzCgrhBsrvBZIZT3jx1M08WeCCHf-th05M4nac9TQO8XmJc5uc0VloZF7XKI'
+        }
+      })
+    } else if (Content === '回复语音') { // 仅公众号可用
+      await sendmess(appid, {
+        touser: FromUserName,
+        msgtype: 'voice',
+        voice: {
+          media_id: '06JVovlqL4v3DJSQTwas1QPIS-nlBlnEFF-rdu03k0dA9a_z6hqel3SCvoYrPZzp'
+        }
+      })
+    } else if (Content === '回复视频') {  // 仅公众号可用
+      await sendmess(appid, {
+        touser: FromUserName,
+        msgtype: 'video',
+        video: {
+          media_id: 'XrfwjfAMf820PzHu9s5GYsvb3etWmR6sC6tTH2H1b3VPRDedW-4igtt6jqYSBxJ2',
+          title: '微信云托管官方教程',
+          description: '微信官方团队打造，贴近业务场景的实战教学'
+        }
+      })
+    } else if (Content === '回复音乐') {  // 仅公众号可用
+      await sendmess(appid, {
+        touser: FromUserName,
+        msgtype: 'music',
+        music: {
+          title: 'Relax｜今日推荐音乐',
+          description: '每日推荐一个好听的音乐，感谢收听～',
+          music_url: 'https://c.y.qq.com/base/fcgi-bin/u?__=0zVuus4U',
+          HQ_music_url: 'https://c.y.qq.com/base/fcgi-bin/u?__=0zVuus4U',
+          thumb_media_id: 'XrfwjfAMf820PzHu9s5GYgOJbfbnoUucToD7A5HFbBM6_nU6TzR4EGkCFTTHLo0t'
+        }
+      })
+    } else if (Content === '回复图文') {  // 小程序、公众号可用
+      await sendmess(appid, {
+        touser: FromUserName,
+        msgtype: 'link',
+        link: {
+          title: 'Relax｜今日推荐音乐',
+          description: '每日推荐一个好听的音乐，感谢收听～',
+          thumb_url: 'https://y.qq.com/music/photo_new/T002R300x300M000004NEn9X0y2W3u_1.jpg?max_age=2592000', // 支持JPG、PNG格式，较好的效果为大图360*200，小图200*200
+          url: 'https://c.y.qq.com/base/fcgi-bin/u?__=0zVuus4U'
+        }
+      })
+    } else if (Content === '回复小程序') { // 仅小程序可用
+      await sendmess(appid, {
+        touser: FromUserName,
+        msgtype: 'miniprogrampage',
+        miniprogrampage: {
+          title: '小程序卡片标题',
+          pagepath: 'pages/index/index', // 跟app.json对齐，支持参数，比如pages/index/index?foo=bar
+          thumb_media_id: 'XrfwjfAMf820PzHu9s5GYgOJbfbnoUucToD7A5HFbBM6_nU6TzR4EGkCFTTHLo0t'
+        }
+      })
+    }
+    res.send('success')
   } else {
     res.send('success')
   }
-  if(Math.abs(dayOfWeek-originDay)>3){
-    // 获取新的yiso token
-    let login = await yisoLogin()
-    token = login['token']
-    JSESSIONID = login['JSESSIONID']
-    // 写入数据库
-    await connection.execute('UPDATE yiso SET day = ?, token = ?, JSESSIONID = ?  WHERE day = ?',[dayOfWeek,token,JSESSIONID,originDay]);
-  }
 })
 
-app.listen(PORT, function () {
-  console.log(`运行成功，端口：${PORT}`)
+app.listen(80, function () {
+  console.log('服务启动成功！')
 })
 
-async function yiso(event, keyword, page, pan, channel,token,JSESSIONID){
-  let json = {
-      token: token,
-      JSESSIONID: JSESSIONID
-  }
-  const url = 'https://yiso.fun/api/search?name='
-  let uri = url+encodeURI(keyword)+'&pageNo='+page
-  var options = {
-      method: 'GET',
-      uri: uri,
-      headers: {
-        'authority': 'yiso.fun',
-        'accept': 'application/json, text/plain, */*',
-        'accept-language': 'zh-CN,zh;q=0.9',
-        'cache-control': 'no-cache',
-        'cookie': '__51vcke__JkIGvjjs25ETn0wz=c1bc85b3-c9c6-59c9-a555-8b23626d612d; __51vuft__JkIGvjjs25ETn0wz=1682834089502; satoken='+json.token+'; __51uvsct__JkIGvjjs25ETn0wz=17; JSESSIONID='+json.JSESSIONID+'; __vtins__JkIGvjjs25ETn0wz={"sid": "b5c1cd5d-4864-5863-b766-bd0d091696c4", "vd": 15, "stt": 66015, "dr": 3771, "expires": 1683971393801, "ct": 1683969593801}',
-        'pragma': 'no-cache',
-        'referer': 'https://yiso.fun/info?searchKey=%E9%98%BF%E5%87%A1%E8%BE%BE',
-        'sec-ch-ua': '"Not?A_Brand";v="8", "Chromium";v="108", "Google Chrome";v="108"',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '"Windows"',
-        'sec-fetch-dest': 'empty',
-        'sec-fetch-mode': 'cors',
-        'sec-fetch-site': 'same-origin',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
-      }
-  };
-  const key = '4OToScUFOaeVTrHE';
-  const iv = '9CLGao1vHKqm17Oz';
-  let types = {
-    0:['全部'],
-    1:['阿里','ali'],
-    2:['百度','baidu'],
-    3:['夸克','quark'],
-    4:['迅雷','xunlei']
-  }
-  console.log(json)
-  let next = page+1
-  let nextWord = keyword+'|_|'
-  if(pan>0){
-    uri = uri + '&from=' + types[pan][1]
-  }
-  console.log(uri)
-  // 定义更换网盘搜索的消息
-  let panmsg = ''
-  for(let i=0;i<5;i++){
-    if(i==pan){
-      continue
-    }
-    panmsg += '<a href="weixin://bizmsgmenu?msgmenucontent='+nextWord+1+'|_|'+i+'&msgmenuid=1">'+types[i][0]+'</a>、'
-  }
-  let msg = ''
-  return await rp(options).then(res=>{
-    let ans = null
-    try {
-      ans = JSON.parse(res)
-    }catch(exception){
-      //出现错误
-        console.log(exception.message);
-        return {
-          json:{
-            ToUserName: event.FromUserName,
-            FromUserName: event.ToUserName,
-            CreateTime: Date.parse(new Date())/1000,
-            MsgType: 'text',
-            Content: msg+"抱歉，服务器暂时出现故障，正在全速抢修！\n\n点击这里"+'<a data-miniprogram-appid="wx3848b063dfdee61c" data-miniprogram-path="pages/search/index">跳转至小程序</a>获取资源~'
-          },
-          code:-1
-        }
-    }
-    if(ans['code']==200&&ans['msg']=='SUCCESS'&&ans.data.total>0){
-      var infos = ans.data
-      let cnt = 0
-      msg+="以下是检索结果(共有"+infos.total+"条)：\n"
-      for (let i = 0; i < infos.list.length; i++) {
-        cnt++
-        let info = infos.list[i];
-        let ciphertext = info.url
-        // 通过 CryptoJS 加密库进行解密
-        let decrypted = CryptoJS.AES.decrypt(
-          {
-            ciphertext: CryptoJS.enc.Base64.parse(ciphertext)
-          },
-          CryptoJS.enc.Utf8.parse(key),
-          {
-            iv: CryptoJS.enc.Utf8.parse(iv),
-            mode: CryptoJS.mode.CBC,
-            padding: CryptoJS.pad.Pkcs7
-          }
-        );
-        let url_ = decrypted.toString(CryptoJS.enc.Utf8)
-        msg+=(i+1)+".来源："+info.from+"\n链接：" + url_ + '\n' //'<a href="' + url_ + '">点我</a>'
-        for (let j = 0; info.fileCount > 0 && j < info.fileInfos.length && j < 1; j++) {
-          const file = info.fileInfos[j];
-          msg+="——"+(j+1)+"."+file.fileName+"...\n"
-        }
-        if(i == infos.list.length-1){
-          if(infos.total<=page*10){
-            next = 1
-          }
-          end = '\n<a href="http://jg.doghun.com/fast/visitor?lg=12508920&s=26182&id=241&client=3&ly=tg">点我玩休闲小游戏</a>'
-          end += '\n<a href="http://www.sogohosting.com">点我免费在线观看影视</a>\n'
-          end += "由于限制，单次只能回复500个字\n"
-          end += '当前页数:' + page + '\n当前搜索的网盘类型为：'+types[pan][0] + '\n您可以点击以下类型指定搜索:\n' + panmsg + '\n'
-          end += '\n<a href="weixin://bizmsgmenu?msgmenucontent='+nextWord+next+'|_|'+pan+'&msgmenuid=1">点我获取下一页</a>\n求求朋友们不要取消关注呀！'
-          msg = msg.substring(0,1100-end.length-1) + '... ...\n' + end
-          break
-        }
-      }
-      return {
-        json:{
-          ToUserName: event.FromUserName,
-          FromUserName: event.ToUserName,
-          CreateTime: Date.parse(new Date())/1000,
-          MsgType: 'text',
-          Content: msg
-        },
-        code:cnt
-      }
-    }else{
-      return {
-        json:{
-          ToUserName: event.FromUserName,
-          FromUserName: event.ToUserName,
-          CreateTime: Date.parse(new Date())/1000,
-          MsgType: 'text',
-          Content: msg+"抱歉，服务器暂时出现故障，正在全速抢修！\n\n点击这里"+'<a data-miniprogram-appid="wx3848b063dfdee61c" data-miniprogram-path="pages/search/index">跳转至小程序</a>获取资源~'
-        },
-        code:0
-      }
-    }
-  })
-}
-
-// 云函数入口函数
-async function yisoLogin() {
-  //尝试15次
-  let token = ""
-  let JSESSIONID = ""
-  for (let i = 0; i < 15; i++) {
-    // 获取验证码图片以及JSESSIONID
-    let ans2 = await getBase64Img()
-    if (ans2.code == 404) {
-      console.log(404)
-      return {
-        code: 404
-      }
-    }
-    //获取验证码
-    let ans3 = await getCode(ans2.base64)
-    if (ans3.data == -1) {
-      continue
-    }
-    //进行登录
-    let res = await Login(ans2.JSESSIONID, ans3.data)
-    if (res.code == 1) {
-      //登陆成功
-      token = res.token
-      JSESSIONID = ans2.JSESSIONID
-      break
-    }
-  }
-  return {
-    token: token,
-    JSESSIONID: JSESSIONID,
-    time: new Date(),
-  }
-}
-
-//返回JSESSIONID、Base64
-async function getBase64Img() {
-  return await axios.get('https://yiso.fun/api/user/login/captcha?t=1690017708879', {
-    responseType: 'arraybuffer', headers: {
-      "Cookie": '__vtins__JkIGvjjs25ETn0wz=%7B%22sid%22%3A%20%22272ecdb0-a2ae-5358-9bc9-b6b1d4fb6b0c%22%2C%20%22vd%22%3A%201%2C%20%22stt%22%3A%200%2C%20%22dr%22%3A%200%2C%20%22expires%22%3A%201690019374032%2C%20%22ct%22%3A%201690017574032%7D; __51uvsct__JkIGvjjs25ETn0wz=4; __51vcke__JkIGvjjs25ETn0wz=105c946b-8095-5c9b-9a40-1f541389079f; __51vuft__JkIGvjjs25ETn0wz=1690017574036'
-    }
-  }).then(res => {
-    // console.log("begin:",res.headers)
-    let data = btoa(new Uint8Array(res.data).reduce((data, byte) => data + String.fromCharCode(byte), ''))
-    let jsessionid = ''
-    try {
-      jsessionid = res.headers['set-cookie'][0].substring(11, 43)
-      return {
-        code: 200,
-        base64: data,
-        JSESSIONID: jsessionid
-      }
-    } catch (error) {
-      console.log(error.name + "：" + error.message)
-      console.log(res.headers)
-      return {
-        code: 404
-      }
-    }
-
-  })
-
-}
-// 进行ocr识别获取验证码
-async function getCode(baseImg) {
-  var options = {
-    'method': 'POST',
-    'uri': 'http://api.jfbym.com/api/YmServer/customApi',
-    'headers': {
-    },
-    formData: {
-      'image': baseImg,
-      'token': 'y1Y-MH4cSKbT-gh1AStrpkODA1XCWFlnQKD8l8Yf6GY',
-      'type': '10110'
-    }
-  };
-  return await rp(options).then(res => {
-    let json = JSON.parse(res)
-    if (json.data.code == 0) {
-      return {
-        code: 0,
-        data: json.data.data
-      }
-    }
-    return {
-      code: -1,
-      data: 'xxxx'
-    }
-  })
-}
-//进行登录操作
-async function Login(JSESSIONID, code) {
-  console.log(code)
-  var options = {
-    'method': 'POST',
-    'url': 'https://yiso.fun/api/user/login',
-    headers: {
-      'authority': 'yiso.fun',
-      'accept': 'application/json, text/plain, */*',
-      'accept-language': 'zh-CN,zh;q=0.9',
-      'cache-control': 'no-cache',
-      'content-type': 'application/json',
-      'cookie': '__51uvsct__JkIGvjjs25ETn0wz=1; __51vcke__JkIGvjjs25ETn0wz=9d90a4a2-0504-57d9-8468-214639305dc1; __51vuft__JkIGvjjs25ETn0wz=1681393485262; _tcnyl=1; JSESSIONID=3460CA74A51B633E1DBBA756BD62C35F; satoken=d5811251-ccf5-4c16-bb92-d2f7a41fdf0e; __vtins__JkIGvjjs25ETn0wz=%7B%22sid%22%3A%20%223d908813-ae49-54b0-8cae-5f021270751d%22%2C%20%22vd%22%3A%208%2C%20%22stt%22%3A%202313742%2C%20%22dr%22%3A%207205%2C%20%22expires%22%3A%201681397599000%2C%20%22ct%22%3A%201681395799000%7D; JSESSIONID=' + JSESSIONID,
-      'origin': 'https://yiso.fun',
-      'pragma': 'no-cache',
-      'referer': 'https://yiso.fun/login',
-      'sec-ch-ua': '"Google Chrome";v="111", "Not(A:Brand";v="8", "Chromium";v="111"',
-      'sec-ch-ua-mobile': '?0',
-      'sec-ch-ua-platform': '"Windows"',
-      'sec-fetch-dest': 'empty',
-      'sec-fetch-mode': 'cors',
-      'sec-fetch-site': 'same-origin',
-      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36'
-    },
-    body: JSON.stringify({
-      "userName": "vitality",
-      "password": "ABCDef.123",
-      "code": code
-    }),
-    resolveWithFullResponse: true
-  };
-  return await rp(options).then(res => {
-    let arr = res.headers['set-cookie']
-    if (arr == undefined || arr.length == 0) {
-      return {
-        code: -1
-      }
-    }
-    return {
-      code: 1,
-      token: arr[0].substring(8, 44)
-    }
-  })
-}
 function sendmess (appid, mess) {
   return new Promise((resolve, reject) => {
     request({
