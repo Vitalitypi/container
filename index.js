@@ -6,7 +6,7 @@ const PORT = process.env.PORT || 80
 const { MYSQL_USERNAME, MYSQL_PASSWORD, MYSQL_ADDRESS = "" } = process.env;
 const [host_mysql, port_mysql] = MYSQL_ADDRESS.split(":");
 // 创建mysql连接
-const connection = await mysql.createConnection({ 
+const connection = mysql.createConnection({ 
   host: host_mysql,
   port: port_mysql,
   user: MYSQL_USERNAME, 
