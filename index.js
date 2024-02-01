@@ -24,8 +24,8 @@ app.all('/', async (req, res) => {
       password: MYSQL_PASSWORD, 
       database: 'nodejs_demo' 
     });
-    const [rows, fields] = await connection.execute('SELECT * FROM test');
-    console.log(rows)
+    const [rows, fields] = await connection.execute('SELECT * FROM yiso');
+    console.log(rows[0])
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
