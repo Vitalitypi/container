@@ -3,6 +3,7 @@ const bodyParser = require('body-parser')
 const mysql = require('mysql2/promise');
 const rp = require('request-promise');
 const CryptoJS = require('crypto-js');
+
 const PORT = process.env.PORT || 80
 // 从环境变量中读取数据库配置
 const { MYSQL_USERNAME, MYSQL_PASSWORD, MYSQL_ADDRESS = "" } = process.env;
