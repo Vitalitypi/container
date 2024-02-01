@@ -49,10 +49,16 @@ app.listen(PORT, function () {
 })
 
 async function getMysql(){
-  try {
-    const results = await connection.query('SELECT * FROM test');
-    return results;
-  } catch (error) {
-    console.error('Error querying database: ' + error.stack);
-  }
+  return connection.query('SELECT * FROM test', (error, results, fields) => {
+    if (error) {
+      console.error('Error querying database: ' + error.stack);
+      return {
+        code: -1
+      }
+    }
+    return {
+      code:0,
+      data:results
+    }
+  });
 }
